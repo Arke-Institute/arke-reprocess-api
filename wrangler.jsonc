@@ -1,0 +1,47 @@
+{
+  "name": "arke-reprocessor-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2024-01-01",
+
+  // Service bindings
+  "services": [
+    {
+      "binding": "IPFS_WRAPPER",
+      "service": "arke-ipfs-api"
+    }
+  ],
+
+  // R2 buckets
+  "r2_buckets": [
+    {
+      "binding": "STAGING_BUCKET",
+      "bucket_name": "arke-staging"
+    }
+  ],
+
+  // Queue producers
+  "queues": {
+    "producers": [
+      {
+        "binding": "BATCH_QUEUE",
+        "queue": "arke-batch-jobs"
+      }
+    ]
+  },
+
+  // Development configuration
+  "vars": {
+    "ENVIRONMENT": "development"
+  },
+
+  "observability": {
+    "enabled": true    
+  },
+
+  "routes": [
+    {
+      "pattern": "reprocess-api.arke.institute",
+      "custom_domain": true
+    }
+  ]
+}
