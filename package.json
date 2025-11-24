@@ -21,7 +21,5 @@
     "typescript": "^5.3.3",
     "wrangler": "^4.50.0"
   },
-  "dependencies": {
-    "ulid": "^2.3.0"
-  }
+  "dependencies": {}
 }

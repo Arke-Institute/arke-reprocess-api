@@ -105,6 +105,7 @@ async function handleReprocessRequest(
     // Extract optional fields
     const cascade = body.cascade ?? false;
     const stopAtPI = body.options?.stop_at_pi ?? '00000000000000000000000000';
+    const customPrompts = body.options?.custom_prompts;
 
     // Validate stopAtPI format if provided
     if (stopAtPI !== '00000000000000000000000000' && !piRegex.test(stopAtPI)) {
@@ -114,9 +115,41 @@ async function handleReprocessRequest(
       }, 400, corsHeaders);
     }
 
+    // Validate custom_prompts structure if provided
+    if (customPrompts !== undefined) {
+      if (typeof customPrompts !== 'object' || Array.isArray(customPrompts)) {
+        return jsonResponse({
+          error: 'VALIDATION_ERROR',
+          message: 'custom_prompts must be an object',
+        }, 400, corsHeaders);
+      }
+
+      const validPromptKeys = ['general', 'reorganization', 'pinax', 'description', 'cheimarros'];
+      const providedKeys = Object.keys(customPrompts);
+      const invalidKeys = providedKeys.filter(k => !validPromptKeys.includes(k));
+
+      if (invalidKeys.length > 0) {
+        return jsonResponse({
+          error: 'VALIDATION_ERROR',
+          message: `Invalid custom_prompts keys: ${invalidKeys.join(', ')}. Valid keys: ${validPromptKeys.join(', ')}`,
+        }, 400, corsHeaders);
+      }
+
+      // Validate that all values are strings
+      for (const [key, value] of Object.entries(customPrompts)) {
+        if (typeof value !== 'string') {
+          return jsonResponse({
+            error: 'VALIDATION_ERROR',
+            message: `custom_prompts.${key} must be a string`,
+          }, 400, corsHeaders);
+        }
+      }
+    }
+
     console.log(`[API] Received reprocess request for PI: ${body.pi}`);
     console.log(`[API] Phases: ${body.phases.join(', ')}`);
     console.log(`[API] Cascade: ${cascade}`);
+    console.log(`[API] Custom prompts: ${customPrompts ? 'Provided' : 'Not provided'}`);
 
     // Process reprocessing request
     const result = await processReprocessingRequest({
@@ -124,6 +157,7 @@ async function handleReprocessRequest(
       phases: body.phases,
       cascade: cascade,
       stopAtPI: stopAtPI,
+      customPrompts: customPrompts,
     }, env);
 
     return jsonResponse(result, 200, corsHeaders);

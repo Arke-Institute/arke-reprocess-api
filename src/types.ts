@@ -21,6 +21,7 @@ export interface ReprocessRequest {
   phases: string[];
   cascade: boolean;
   stopAtPI: string;
+  customPrompts?: CustomPrompts;
 }
 
 export interface ReprocessResponse {

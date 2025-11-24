@@ -4,7 +4,7 @@
  * Coordinates entity resolution, materialization, manifest building, and queue publishing
  */
 
-import { ulid } from 'ulid';
+import { generateULID } from './ulid';
 import { resolveEntitiesForReprocessing } from './resolver';
 import { materializeEntityToStaging } from './materializer';
 import { buildReprocessingManifest } from './manifest-builder';
@@ -14,6 +14,7 @@ import type {
   ReprocessResponse,
   QueueMessage,
   BatchManifest,
+  CustomPrompts,
 } from './types';
 
 /**
@@ -30,7 +31,7 @@ export async function processReprocessingRequest(
   env: Env
 ): Promise<ReprocessResponse> {
   const startTime = Date.now();
-  const batchId = `reprocess_${ulid()}`;
+  const batchId = `reprocess_${generateULID()}`;
   const stagingPrefix = `reprocessing/${batchId}/`;
 
   console.log(`[Reprocessor] ========================================`);
@@ -40,6 +41,7 @@ export async function processReprocessingRequest(
   console.log(`[Reprocessor] Phases: ${request.phases.join(', ')}`);
   console.log(`[Reprocessor] Cascade: ${request.cascade}`);
   console.log(`[Reprocessor] Stop at PI: ${request.stopAtPI}`);
+  console.log(`[Reprocessor] Custom prompts: ${request.customPrompts ? 'Yes' : 'No'}`);
   console.log(`[Reprocessor] ========================================`);
 
   // 1. Resolve entities (target + ancestors if cascade)
@@ -72,7 +74,7 @@ export async function processReprocessingRequest(
 
   // 4. Publish to queue
   console.log(`[Reprocessor] Step 4: Publishing to queue...`);
-  await publishReprocessingBatch(manifest, stagingPrefix, env);
+  await publishReprocessingBatch(manifest, stagingPrefix, request.customPrompts, env);
   console.log(`[Reprocessor] ✓ Published batch ${batchId} to queue`);
 
   const duration = Date.now() - startTime;
@@ -109,6 +111,7 @@ export async function processReprocessingRequest(
 async function publishReprocessingBatch(
   manifest: BatchManifest,
   stagingPrefix: string,
+  customPrompts: CustomPrompts | undefined,
   env: Env
 ): Promise<void> {
   // Upload manifest to staging
@@ -130,6 +133,7 @@ async function publishReprocessingBatch(
     finalized_at: new Date().toISOString(),
     metadata: {},
     reprocessing_mode: true,  // KEY: This tells orchestrator to skip discovery
+    custom_prompts: customPrompts,  // Pass through custom prompts for AI services
   };
 
   // Publish to queue
