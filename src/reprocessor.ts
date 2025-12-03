@@ -2,6 +2,26 @@
  * Main Reprocessing Orchestration
  *
  * Coordinates entity resolution, materialization, manifest building, and queue publishing
+ *
+ * ## Concurrency Note (TODO: Future Enhancement)
+ *
+ * Each reprocess request generates a unique batch_id (not tied to the PI). This means
+ * concurrent reprocess requests for the same PI will run as separate batches.
+ *
+ * This is generally safe because:
+ * - Each phase fetches the latest entity state from IPFS before generating content
+ * - CAS (Compare-and-Swap) prevents version conflicts on publish
+ * - Component updates are merged, not replaced (adding description.md preserves pinax.json)
+ *
+ * Edge case to be aware of:
+ * - If two batches update the SAME component (e.g., both regenerating description.md),
+ *   the second one to finish will overwrite the first. The CAS retry ensures no data
+ *   corruption, but work from the first batch is lost.
+ *
+ * Potential future enhancement: Add PI-level locking via Durable Objects to serialize
+ * reprocessing requests for the same entity. For now, this is acceptable since:
+ * - Concurrent identical reprocess requests are rare in practice
+ * - The "last write wins" behavior is deterministic and safe
  */
 
 import { generateULID } from './ulid';
@@ -31,7 +51,7 @@ export async function processReprocessingRequest(
   env: Env
 ): Promise<ReprocessResponse> {
   const startTime = Date.now();
-  const batchId = `reprocess_${generateULID()}`;
+  const batchId = generateULID();
   const stagingPrefix = `reprocessing/${batchId}/`;
 
   console.log(`[Reprocessor] ========================================`);
