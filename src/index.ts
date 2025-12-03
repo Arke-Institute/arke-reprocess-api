@@ -106,6 +106,7 @@ async function handleReprocessRequest(
     const cascade = body.cascade ?? false;
     const stopAtPI = body.options?.stop_at_pi ?? '00000000000000000000000000';
     const customPrompts = body.options?.custom_prompts;
+    const customNote = body.options?.custom_note;
 
     // Validate stopAtPI format if provided
     if (stopAtPI !== '00000000000000000000000000' && !piRegex.test(stopAtPI)) {
@@ -150,6 +151,7 @@ async function handleReprocessRequest(
     console.log(`[API] Phases: ${body.phases.join(', ')}`);
     console.log(`[API] Cascade: ${cascade}`);
     console.log(`[API] Custom prompts: ${customPrompts ? 'Provided' : 'Not provided'}`);
+    console.log(`[API] Custom note: ${customNote ? `"${customNote}"` : 'Not provided'}`);
 
     // Process reprocessing request
     const result = await processReprocessingRequest({
@@ -158,6 +160,7 @@ async function handleReprocessRequest(
       cascade: cascade,
       stopAtPI: stopAtPI,
       customPrompts: customPrompts,
+      customNote: customNote,
     }, env);
 
     return jsonResponse(result, 200, corsHeaders);

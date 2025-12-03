@@ -74,7 +74,7 @@ export async function processReprocessingRequest(
 
   // 4. Publish to queue
   console.log(`[Reprocessor] Step 4: Publishing to queue...`);
-  await publishReprocessingBatch(manifest, stagingPrefix, request.customPrompts, env);
+  await publishReprocessingBatch(manifest, stagingPrefix, request.customPrompts, request.customNote, env);
   console.log(`[Reprocessor] ✓ Published batch ${batchId} to queue`);
 
   const duration = Date.now() - startTime;
@@ -112,6 +112,7 @@ async function publishReprocessingBatch(
   manifest: BatchManifest,
   stagingPrefix: string,
   customPrompts: CustomPrompts | undefined,
+  customNote: string | undefined,
   env: Env
 ): Promise<void> {
   // Upload manifest to staging
@@ -134,6 +135,7 @@ async function publishReprocessingBatch(
     metadata: {},
     reprocessing_mode: true,  // KEY: This tells orchestrator to skip discovery
     custom_prompts: customPrompts,  // Pass through custom prompts for AI services
+    custom_note: customNote,  // Pass through custom version note
   };
 
   // Publish to queue

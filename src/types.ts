@@ -22,6 +22,7 @@ export interface ReprocessRequest {
   cascade: boolean;
   stopAtPI: string;
   customPrompts?: CustomPrompts;
+  customNote?: string;  // Optional custom version note (overrides default phase notes)
 }
 
 export interface ReprocessResponse {
@@ -85,6 +86,7 @@ export interface QueueMessage {
   metadata: Record<string, any>;
   parent_pi?: string;  // Optional parent PI for attaching collection
   custom_prompts?: CustomPrompts;  // Optional custom prompts for AI services
+  custom_note?: string;  // Optional custom version note (overrides default phase notes)
 
   // NEW: Reprocessing mode flag
   reprocessing_mode?: boolean;  // If true, orchestrator skips discovery phase
