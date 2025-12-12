@@ -34,11 +34,14 @@ export async function resolveEntitiesForReprocessing(
 
   console.log(`[Resolver] Starting cascade from ${pi} (stop_at_pi: ${stopAtPI})`);
 
+  // Sentinel value for "no parent" (ULID with all zeros)
+  const NO_PARENT_SENTINEL = '00000000000000000000000000';
+
   while (depth < maxDepth) {
     const entity = await ipfsClient.getEntity(currentPI);
 
-    // Stop at root (no parent) or stop_at_pi
-    if (!entity.parent_pi || entity.parent_pi === stopAtPI) {
+    // Stop at root (no parent, sentinel value, or reached stop_at_pi)
+    if (!entity.parent_pi || entity.parent_pi === NO_PARENT_SENTINEL || entity.parent_pi === stopAtPI) {
       console.log(`[Resolver] Stopped at ${currentPI} (no parent or reached stop_at_pi)`);
       break;
     }

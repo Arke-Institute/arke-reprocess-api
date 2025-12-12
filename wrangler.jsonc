@@ -8,6 +8,10 @@
     {
       "binding": "IPFS_WRAPPER",
       "service": "arke-ipfs-api"
+    },
+    {
+      "binding": "COLLECTIONS_WORKER",
+      "service": "arke-collections-worker"
     }
   ],
 

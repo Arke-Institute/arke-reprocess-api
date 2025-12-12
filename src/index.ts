@@ -5,6 +5,7 @@
  */
 
 import { processReprocessingRequest } from './reprocessor';
+import { checkReprocessPermission } from './permissions';
 import type { Env, ErrorResponse } from './types';
 
 export default {
@@ -57,6 +58,9 @@ async function handleReprocessRequest(
   corsHeaders: Record<string, string>
 ): Promise<Response> {
   try {
+    // Extract user ID from header (set by gateway after auth)
+    const userId = request.headers.get('X-User-Id');
+
     // Parse request body
     let body: any;
     try {
@@ -102,14 +106,40 @@ async function handleReprocessRequest(
       }, 400, corsHeaders);
     }
 
+    // Permission check - verify user can reprocess this entity
+    const permCheck = await checkReprocessPermission(env, userId, body.pi);
+
+    if (!permCheck.allowed) {
+      return jsonResponse({
+        error: 'FORBIDDEN',
+        message: permCheck.reason || 'Not authorized to reprocess this entity',
+      }, 403, corsHeaders);
+    }
+
     // Extract optional fields
     const cascade = body.cascade ?? false;
-    const stopAtPI = body.options?.stop_at_pi ?? '00000000000000000000000000';
+    const explicitStopAtPI = body.options?.stop_at_pi;
     const customPrompts = body.options?.custom_prompts;
     const customNote = body.options?.custom_note;
 
-    // Validate stopAtPI format if provided
-    if (stopAtPI !== '00000000000000000000000000' && !piRegex.test(stopAtPI)) {
+    // Determine effective stop_at_pi:
+    // 1. Use explicit stop_at_pi if provided (advanced override)
+    // 2. Otherwise use collection rootPi (automatic boundary)
+    // 3. If no collection (free entity), use default (cascade to absolute root)
+    let effectiveStopAtPI: string;
+    if (explicitStopAtPI) {
+      effectiveStopAtPI = explicitStopAtPI;
+      console.log(`[API] Using explicit stop_at_pi: ${effectiveStopAtPI}`);
+    } else if (permCheck.cascadeStopPi) {
+      effectiveStopAtPI = permCheck.cascadeStopPi;
+      console.log(`[API] Auto-setting cascade boundary to collection root: ${effectiveStopAtPI}`);
+    } else {
+      effectiveStopAtPI = '00000000000000000000000000';
+      console.log(`[API] No collection boundary, cascade to absolute root`);
+    }
+
+    // Validate stopAtPI format if explicitly provided
+    if (explicitStopAtPI && explicitStopAtPI !== '00000000000000000000000000' && !piRegex.test(explicitStopAtPI)) {
       return jsonResponse({
         error: 'VALIDATION_ERROR',
         message: 'Invalid stop_at_pi format (must be 26-character ULID)',
@@ -148,8 +178,10 @@ async function handleReprocessRequest(
     }
 
     console.log(`[API] Received reprocess request for PI: ${body.pi}`);
+    console.log(`[API] User: ${userId || 'anonymous'}`);
     console.log(`[API] Phases: ${body.phases.join(', ')}`);
     console.log(`[API] Cascade: ${cascade}`);
+    console.log(`[API] Effective stop_at_pi: ${effectiveStopAtPI}`);
     console.log(`[API] Custom prompts: ${customPrompts ? 'Provided' : 'Not provided'}`);
     console.log(`[API] Custom note: ${customNote ? `"${customNote}"` : 'Not provided'}`);
 
@@ -158,7 +190,7 @@ async function handleReprocessRequest(
       pi: body.pi,
       phases: body.phases,
       cascade: cascade,
-      stopAtPI: stopAtPI,
+      stopAtPI: effectiveStopAtPI,
       customPrompts: customPrompts,
       customNote: customNote,
     }, env);

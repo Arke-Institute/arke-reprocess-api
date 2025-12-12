@@ -10,6 +10,37 @@ export interface Env {
   IPFS_WRAPPER: Fetcher;  // Service binding to arke-ipfs-api
   STAGING_BUCKET: R2Bucket;  // R2 staging bucket
   BATCH_QUEUE: Queue<QueueMessage>;  // Queue for batch jobs
+  COLLECTIONS_WORKER: Fetcher;  // Service binding to collections worker for permission checks
+}
+
+// ============================================================================
+// Permission Types
+// ============================================================================
+
+/**
+ * Permission check result from collections worker /pi/:pi/permissions endpoint
+ */
+export interface PiPermissions {
+  pi: string;
+  canView: boolean;
+  canEdit: boolean;
+  canAdminister: boolean;
+  collection: {
+    id: string;
+    title: string;
+    slug: string;
+    visibility: string;
+    role: 'owner' | 'editor' | null;
+    rootPi: string;
+    hops: number;
+  } | null;
+}
+
+export interface PermissionCheckResult {
+  allowed: boolean;
+  reason?: string;
+  permissions?: PiPermissions;
+  cascadeStopPi?: string;  // Collection rootPi - where cascade should stop
 }
 
 // ============================================================================
